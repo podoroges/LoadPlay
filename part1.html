@@ -1,0 +1,119 @@
+<html>
+<head>
+<script>
+
+
+</script>
+
+</head>
+
+<body>
+
+
+<canvas id="myCanvas" width="500" height="300"
+style="border:1px solid #000000;">
+</canvas>
+
+<script>
+
+
+
+
+var canvas = document.getElementById("myCanvas");
+var width = Math.max(window.screen.availWidth*2/3, 1024);
+var height = Math.max(window.screen.availHeight*2/3, 768);
+canvas.width = width;
+canvas.height = height;
+var ctx = canvas.getContext("2d");
+ctx.font = "30px Arial";
+ctx.fillText("Hello World",10,50);
+
+
+
+ctx.font = "30px Arial";
+var txt1 = width+" "+height+" "+window.screen.availWidth*2/3;
+ctx.fillText(txt1,10,190);
+
+// Box1
+var box1 = { x:300, y:300, w:30, h:30 };
+var box2 = { x:350, y:300, w:30, h:60 };
+var boxes = [box1,box2];
+var selectedBox = undefined;
+
+// Set up mouse events for drawing
+var mouseDown = false;
+var mousePos = { x:0, y:0 };
+var lastPos = mousePos;
+canvas.addEventListener("mousedown", function (e) {
+	mouseDown = true;
+	lastPos = getMousePos(canvas, e);
+	
+	// Check if inside of any boxes
+	var arrayLength = boxes.length;
+	for (var i = 0; i < arrayLength; i++) {
+		if((lastPos.x>boxes[i].x)&&(lastPos.x<boxes[i].x+boxes[i].w)
+		&&(lastPos.y>boxes[i].y)&&(lastPos.y<boxes[i].y+boxes[i].h))
+			selectedBox = i;
+	}
+}, false);
+canvas.addEventListener("mouseup", function (e) {
+  mouseDown = false;
+	selectedBox = undefined;
+}, false);
+canvas.addEventListener("mousemove", function (e) {
+	var newmousePos = {};
+	newmousePos = getMousePos(canvas, e);
+	if(mouseDown && (selectedBox>=0)){
+		boxes[selectedBox].x = boxes[selectedBox].x+(newmousePos.x-mousePos.x);
+		boxes[selectedBox].y = boxes[selectedBox].y+(newmousePos.y-mousePos.y);
+	} 
+  mousePos = newmousePos;
+}, false);
+
+// Get the position of the mouse relative to the canvas
+function getMousePos(canvasDom, mouseEvent) {
+  var rect = canvasDom.getBoundingClientRect();
+  return {
+    x: mouseEvent.clientX - rect.left,
+    y: mouseEvent.clientY - rect.top
+  };
+}
+
+
+function step(timestamp) {
+	var ctx = canvas.getContext("2d");
+	ctx.clearRect(0,0,canvas.width, canvas.height);
+	ctx.beginPath();// Dirty hack, otherwise clearRect not working
+	ctx.lineWidth=2;
+	
+	var arrayLength = boxes.length;
+	for (var i = 0; i < arrayLength; i++) {
+		ctx.strokeText(i+" "+selectedBox,10,50+30*i);
+		ctx.beginPath();
+		if(selectedBox == i){
+			ctx.strokeStyle="#FF0000";
+		}
+		else{
+			ctx.strokeStyle="#00FF00";
+		}
+		ctx.rect(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h);
+		ctx.stroke();
+	}
+	window.requestAnimationFrame(step);
+}
+function StringOfBoxes(){
+	var out = '';
+	var arrayLength = boxes.length;
+	for (var i = 0; i < arrayLength; i++) {
+		out = out+'{'+boxes[i].x+','+boxes[i].y+','+boxes[i].w+','+boxes[i].h+'}';
+	}
+	return encodeURI(out);
+}
+
+window.requestAnimationFrame(step);
+
+</script>
+<br>
+<button type=button onclick='alert(StringOfBoxes());'>Save</button>
+</body>
+</html>
