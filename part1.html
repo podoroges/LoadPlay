@@ -20,23 +20,45 @@ style="border:1px solid #000000;">
 
 
 var canvas = document.getElementById("myCanvas");
-var width = Math.max(window.screen.availWidth*2/3, 1024);
-var height = Math.max(window.screen.availHeight*2/3, 768);
-canvas.width = width;
-canvas.height = height;
+var sw = Math.max(window.screen.availWidth*2/3, 1024);
+var sh = Math.max(window.screen.availHeight*2/3, 768);
+canvas.width = sw;
+canvas.height = sh;
 var ctx = canvas.getContext("2d");
-ctx.font = "30px Arial";
-ctx.fillText("Hello World",10,50);
+
+
+// Geometry
+var zoom = 10;
+var dx = 0;
+var dy = 0;
+function g2sx(x){
+	return zoom*(x-dx)+sw/2;
+}
+function g2sy(y){
+	return -zoom*(y-dy)+sh/2;
+}
+function s2gx(x){
+	return dx-(sw/2-x)/zoom;
+}
+function s2gy(y){
+	return dy-(y-sh/2)/zoom;
+}
+//
+
+// Cargo hold
+/*
+Длина: 36,5 м (20..84)
+Ширина: 6,4 м (9)
+Высота: 4,4 м
+*/
 
 
 
-ctx.font = "30px Arial";
-var txt1 = width+" "+height+" "+window.screen.availWidth*2/3;
-ctx.fillText(txt1,10,190);
+ctx.font = "10px Arial";
 
 // Box1
-var box1 = { x:300, y:300, w:30, h:30 };
-var box2 = { x:350, y:300, w:30, h:60 };
+var box1 = { x:3, y:3.00, w:3.0, h:3.0 };
+var box2 = { x:3.5, y:3.00, w:3.0, h:6.0 };
 var boxes = [box1,box2];
 var selectedBox = undefined;
 
@@ -46,49 +68,122 @@ var mousePos = { x:0, y:0 };
 var lastPos = mousePos;
 canvas.addEventListener("mousedown", function (e) {
 	mouseDown = true;
-	lastPos = getMousePos(canvas, e);
+	lastPos = getMousePos(canvas,e);
 	
 	// Check if inside of any boxes
 	var arrayLength = boxes.length;
 	for (var i = 0; i < arrayLength; i++) {
-		if((lastPos.x>boxes[i].x)&&(lastPos.x<boxes[i].x+boxes[i].w)
-		&&(lastPos.y>boxes[i].y)&&(lastPos.y<boxes[i].y+boxes[i].h))
+		if((lastPos.x>g2sx(boxes[i].x))&&(lastPos.x<g2sx(boxes[i].x)+boxes[i].w*zoom)
+		&&(lastPos.y>g2sy(boxes[i].y))&&(lastPos.y<g2sy(boxes[i].y)+boxes[i].h*zoom))
 			selectedBox = i;
 	}
 }, false);
 canvas.addEventListener("mouseup", function (e) {
-  mouseDown = false;
+	mouseDown = false;
 	selectedBox = undefined;
 }, false);
 canvas.addEventListener("mousemove", function (e) {
 	var newmousePos = {};
 	newmousePos = getMousePos(canvas, e);
+	// Moving box
 	if(mouseDown && (selectedBox>=0)){
-		boxes[selectedBox].x = boxes[selectedBox].x+(newmousePos.x-mousePos.x);
-		boxes[selectedBox].y = boxes[selectedBox].y+(newmousePos.y-mousePos.y);
+		boxes[selectedBox].x = boxes[selectedBox].x+(newmousePos.x-mousePos.x)/zoom;
+		boxes[selectedBox].y = boxes[selectedBox].y-(newmousePos.y-mousePos.y)/zoom;
 	} 
-  mousePos = newmousePos;
+	// Moving screen
+	if(mouseDown && (selectedBox===undefined)){
+		dx = dx-(newmousePos.x-mousePos.x)/zoom;
+		dy = dy+(newmousePos.y-mousePos.y)/zoom;
+	}
+	mousePos = newmousePos;
 }, false);
 
 // Get the position of the mouse relative to the canvas
 function getMousePos(canvasDom, mouseEvent) {
-  var rect = canvasDom.getBoundingClientRect();
-  return {
-    x: mouseEvent.clientX - rect.left,
-    y: mouseEvent.clientY - rect.top
-  };
+	var rect = canvasDom.getBoundingClientRect();
+	return {
+		x:mouseEvent.clientX-rect.left,
+		y:mouseEvent.clientY-rect.top
+	};
 }
 
+// + MouseWheel section
+var myitem = document.getElementById("myCanvas");
+if (myitem.addEventListener)
+{
+	// IE9, Chrome, Safari, Opera
+	myitem.addEventListener("mousewheel", MouseWheelHandler, false);
+	// Firefox
+	myitem.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+}
+// IE 6/7/8
+else
+{
+	myitem.attachEvent("onmousewheel", MouseWheelHandler);
+}
+
+function MouseWheelHandler(e)
+{
+	// cross-browser wheel delta
+	var e = window.event || e; // old IE support
+	var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+	var minzoom = 3;
+	var oldzoom = zoom;
+	zoom = zoom +3*delta;
+	if(zoom<minzoom)// We dont want divide by zero error, so we set minzoom limit
+		zoom = minzoom;
+	// Changing dx/dy as zoom is around mouse cursor location
+	dx = dx-(sw/2-mousePos.x)/oldzoom+(sw/2-mousePos.x)/zoom;
+	dy = dy-(mousePos.y-sh/2)/oldzoom+(mousePos.y-sh/2)/zoom;
+	// We dont want browser page to scroll
+	try{
+		e.preventDefault();
+	}
+	catch(err)
+	{
+		// Dont care
+	}
+	return false;
+}
+// - MouseWheel section
+
+
+function line_g(x1,y1,x2,y2){
+	ctx.beginPath();
+	ctx.moveTo(g2sx(x1),g2sy(y1));
+	ctx.lineTo(g2sx(x2),g2sy(y2));
+	ctx.stroke();
+}
 
 function step(timestamp) {
 	var ctx = canvas.getContext("2d");
 	ctx.clearRect(0,0,canvas.width, canvas.height);
 	ctx.beginPath();// Dirty hack, otherwise clearRect not working
+	
+	// Cargo floor
+	ctx.lineWidth=0.5;
+	ctx.strokeStyle="#0000FF";
+	line_g(0,0,0,36.5);
+	line_g(0,0,6.4,0);
+	line_g(0,36.5,6.4,36.5);
+	line_g(6.4,0,6.4,36.5);
+	ctx.lineWidth=0.2;
+	
+	line_g(3.2,0,3.2,36.5);//Centerline
+	for(var i=1;i<4;i++){// Vertical grid
+		line_g(3.2-i,0,3.2-i,36.5);
+		line_g(3.2+i,0,3.2+i,36.5);
+	}
+	for(var i=1;i<37;i++){// Vertical grid
+		line_g(0,i,6.4,i);
+	}
+		
+	
 	ctx.lineWidth=2;
 	
 	var arrayLength = boxes.length;
 	for (var i = 0; i < arrayLength; i++) {
-		ctx.strokeText(i+" "+selectedBox,10,50+30*i);
+		ctx.fillText(i+" "+selectedBox,10,70+30*i);
 		ctx.beginPath();
 		if(selectedBox == i){
 			ctx.strokeStyle="#FF0000";
@@ -96,9 +191,10 @@ function step(timestamp) {
 		else{
 			ctx.strokeStyle="#00FF00";
 		}
-		ctx.rect(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h);
+		ctx.rect(g2sx(boxes[i].x),g2sy(boxes[i].y),boxes[i].w*zoom,boxes[i].h*zoom);
 		ctx.stroke();
 	}
+	ctx.fillText("zoom="+zoom+" dx="+dx+" dy="+dy+" mpx="+mousePos.x+" mpy="+mousePos.y+" gx="+s2gx(mousePos.x)+" gy="+s2gy(mousePos.y),10,30);
 	window.requestAnimationFrame(step);
 }
 function StringOfBoxes(){
