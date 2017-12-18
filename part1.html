@@ -57,10 +57,28 @@ function s2gy(y){
 ctx.font = "10px Arial";
 
 // Box1
-var box1 = { x:3, y:3.00, w:3.0, h:3.0 };
+var box1 = { x:3, y:3.00, w:3.0, h:4.0 };
 var box2 = { x:3.5, y:3.00, w:3.0, h:6.0 };
 var boxes = [box1,box2];
 var selectedBox = undefined;
+function HitBox(p){
+	// Check if point [p.x;p.y] inside of any boxes
+	var arrayLength = boxes.length;
+	for (var i = 0; i < arrayLength; i++) {
+		var x1 = g2sx(boxes[i].x-boxes[i].w/2);
+		var x2 = g2sx(boxes[i].x+boxes[i].w/2);
+		var y1 = g2sy(boxes[i].y-boxes[i].h/2);
+		var y2 = g2sy(boxes[i].y+boxes[i].h/2);
+		var minx = Math.min(x1,x2);
+		var maxx = Math.max(x1,x2);
+		var miny = Math.min(y1,y2);
+		var maxy = Math.max(y1,y2);
+		if((p.x>minx)&&(p.x<maxx)
+		&&(p.y>miny)&&(p.y<maxy))
+			return i;
+	}
+	return undefined;
+}
 
 // Set up mouse events for drawing
 var mouseDown = false;
@@ -69,22 +87,14 @@ var lastPos = mousePos;
 canvas.addEventListener("mousedown", function (e) {
 	mouseDown = true;
 	lastPos = getMousePos(canvas,e);
-	
-	// Check if inside of any boxes
-	var arrayLength = boxes.length;
-	for (var i = 0; i < arrayLength; i++) {
-		if((lastPos.x>g2sx(boxes[i].x))&&(lastPos.x<g2sx(boxes[i].x)+boxes[i].w*zoom)
-		&&(lastPos.y>g2sy(boxes[i].y))&&(lastPos.y<g2sy(boxes[i].y)+boxes[i].h*zoom))
-			selectedBox = i;
-	}
+	selectedBox = HitBox(lastPos);
 }, false);
 canvas.addEventListener("mouseup", function (e) {
 	mouseDown = false;
 	selectedBox = undefined;
 }, false);
 canvas.addEventListener("mousemove", function (e) {
-	var newmousePos = {};
-	newmousePos = getMousePos(canvas, e);
+	var newmousePos = getMousePos(canvas, e);
 	// Moving box
 	if(mouseDown && (selectedBox>=0)){
 		boxes[selectedBox].x = boxes[selectedBox].x+(newmousePos.x-mousePos.x)/zoom;
@@ -97,6 +107,16 @@ canvas.addEventListener("mousemove", function (e) {
 	}
 	mousePos = newmousePos;
 }, false);
+canvas.addEventListener("dblclick", function(e){ 
+	var newmousePos = getMousePos(canvas, e);
+	var i = HitBox(newmousePos);
+	if(i!==undefined){
+		var t = boxes[i].w;
+		boxes[i].w = boxes[i].h;
+		boxes[i].h = t;
+	}
+});
+
 
 // Get the position of the mouse relative to the canvas
 function getMousePos(canvasDom, mouseEvent) {
@@ -191,7 +211,7 @@ function step(timestamp) {
 		else{
 			ctx.strokeStyle="#00FF00";
 		}
-		ctx.rect(g2sx(boxes[i].x),g2sy(boxes[i].y),boxes[i].w*zoom,boxes[i].h*zoom);
+		ctx.rect(Math.min(g2sx(boxes[i].x-boxes[i].w/2),g2sx(boxes[i].x+boxes[i].w/2)),Math.min(g2sy(boxes[i].y-boxes[i].h/2),g2sy(boxes[i].y+boxes[i].h/2)),boxes[i].w*zoom,boxes[i].h*zoom);
 		ctx.stroke();
 	}
 	ctx.fillText("zoom="+zoom+" dx="+dx+" dy="+dy+" mpx="+mousePos.x+" mpy="+mousePos.y+" gx="+s2gx(mousePos.x)+" gy="+s2gy(mousePos.y),10,30);
