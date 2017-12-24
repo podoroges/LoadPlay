@@ -1,0 +1,103 @@
+<html>
+<head>
+<script>
+	var tail = 0;
+	function set_minus_button(){
+		//Set "minus" buttom enabled state
+		var bminus = document.getElementById('bminus');
+		bminus.disabled = (tail<2);
+	}
+	function add_field(d1,prefix1,width1,val1){
+		var t1 = document.createElement('INPUT');
+		t1.setAttribute('type', 'text');
+		t1.name = 'd' + tail + prefix1;
+		t1.id = t1.name;
+		t1.value = val1;
+		t1.style.width = width1;
+		d1.appendChild(t1);
+	}
+	function plus(){
+		//Add row
+		tail++;
+		var r1 = document.getElementById('root');
+
+		//Row div
+		var d1 = document.createElement('DIV');
+		d1.id = 'd' + tail;
+		r1.appendChild(d1);
+
+		//Fields
+		add_field(d1,'t1',70,1);
+		add_field(d1,'t2',100,600);
+		add_field(d1,'t3',100,300);
+		add_field(d1,'t4',100,250);
+		add_field(d1,'t5',100,2000);
+		add_field(d1,'t6',400,'Container'+tail);
+		add_field(d1,'t7',200,'');
+
+		set_minus_button();
+	}
+	function minus() {
+		//Kill row
+		var r1 = document.getElementById('root');
+		var d1 = document.getElementById('d' + tail);
+		var children = d1.children;
+		for (var i = 0; i < children.length; i++) {
+			d1.removeChild(children[i]);
+		}
+		r1.removeChild(d1);
+		tail--;
+		
+		set_minus_button();
+	}
+
+	function add_head_field(d1,value1,width1){
+		var t1 = document.createElement('INPUT');
+		t1.setAttribute('type', 'text');
+		t1.value = value1;
+		t1.style.width = width1;
+		t1.readOnly = true;
+		d1.appendChild(t1);
+	}
+
+	function init_head(){
+		var r1 = document.getElementById('root');
+
+		//Row div
+		var d1 = document.createElement('DIV');
+		d1.id = "d" + tail;
+		r1.appendChild(d1);
+
+		//Text fields
+		add_head_field(d1,'Count',70);
+		add_head_field(d1,'Length',100);
+		add_head_field(d1,'Width',100);
+		add_head_field(d1,'Height',100);
+		add_head_field(d1,'Weight',100);
+		add_head_field(d1,'Name',400);
+		add_head_field(d1,'DG UN',200);
+
+		// Add first row
+		plus();
+	}
+
+
+
+
+</script>
+
+</head>
+
+<body onload='init_head()'>
+	<div id='root'>
+
+	</div>
+	<button onclick='plus()'>
+		+
+	</button>
+	<button onclick='minus()' id='bminus'>
+		-
+	</button>
+</body>
+
+</html
