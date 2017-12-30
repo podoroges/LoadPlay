@@ -21,16 +21,25 @@ style="border:1px solid #000000;">
 
 var canvas = document.getElementById("myCanvas");
 var sw = Math.max(window.screen.availWidth*2/3, 1024);
-var sh = Math.max(window.screen.availHeight*2/3, 768);
+var sh = Math.max(window.screen.availHeight*2/3, 640);
 canvas.width = sw;
 canvas.height = sh;
 var ctx = canvas.getContext("2d");
 
 
+// Cargo hold
+/*
+Длина: 36,5 м (20..84)
+Ширина: 6,4 м (9)
+Высота: 4,4 м
+*/
+var acl = 36.5;
+var acw = 6.4;
 // Geometry
-var zoom = 10;
-var dx = 0;
-var dy = 0;
+var margin = 40; // How many pixels to the edge os screen 
+var zoom = (sh-2*margin)/acl;
+var dx = -(margin-sw/2)/zoom;
+var dy = (sh/2-margin)/zoom;
 function g2sx(x){
 	return zoom*(x-dx)+sw/2;
 }
@@ -45,20 +54,12 @@ function s2gy(y){
 }
 //
 
-// Cargo hold
-/*
-Длина: 36,5 м (20..84)
-Ширина: 6,4 м (9)
-Высота: 4,4 м
-*/
 
 
-
-ctx.font = "10px Arial";
 
 // Box1
-var box1 = { x:3, y:3.00, w:3.0, h:4.0 };
-var box2 = { x:3.5, y:3.00, w:3.0, h:6.0 };
+var box1 = { x:10, y:10.00, w:3.0, h:4.0, weight:2000 };
+var box2 = { x:10, y:20.00, w:3.0, h:6.0, weight:12000 };
 var boxes = [box1,box2];
 var selectedBox = undefined;
 function HitBox(p){
@@ -168,6 +169,27 @@ function MouseWheelHandler(e)
 // - MouseWheel section
 
 
+function textinBox(x1,y1,x2,y2,t1,textheight){
+	// Pass real screen coordinates here
+	ctx.textAlign = "center";
+	if((x2-x1)>y2-y1){
+		// No rotate
+		if(ctx.measureText(t1).width<(x2-x1)*3/4)
+			ctx.fillText(t1, (x2+x1)/2,(y2+y1)/2+textheight/2);
+	}
+	else{
+		// Rotate
+		if(ctx.measureText(t1).width*3/4<(y2-y1)*3/4){
+			ctx.save();
+			ctx.translate((x2+x1)/2,(y2+y1)/2);
+			ctx.rotate(-Math.PI/2);
+			ctx.fillText(t1, 0, textheight/2);
+			ctx.restore();
+		}
+	}
+	ctx.textAlign = "left";
+}
+
 function line_g(x1,y1,x2,y2){
 	ctx.beginPath();
 	ctx.moveTo(g2sx(x1),g2sy(y1));
@@ -176,45 +198,67 @@ function line_g(x1,y1,x2,y2){
 }
 
 function step(timestamp) {
-	var ctx = canvas.getContext("2d");
+	var ctx = canvas.getContext('2d');
 	ctx.clearRect(0,0,canvas.width, canvas.height);
 	ctx.beginPath();// Dirty hack, otherwise clearRect not working
 	
 	// Cargo floor
 	ctx.lineWidth=0.5;
-	ctx.strokeStyle="#0000FF";
-	line_g(0,0,0,36.5);
-	line_g(0,0,6.4,0);
-	line_g(0,36.5,6.4,36.5);
-	line_g(6.4,0,6.4,36.5);
+	ctx.strokeStyle='#0000FF';
+	line_g(0,0,0,acl);
+	line_g(0,0,acw,0);
+	line_g(0,acl,acw,acl);
+	line_g(acw,0,acw,acl);
 	ctx.lineWidth=0.2;
 	
-	line_g(3.2,0,3.2,36.5);//Centerline
+	line_g(3.2,0,3.2,acl);//Centerline
 	for(var i=1;i<4;i++){// Vertical grid
-		line_g(3.2-i,0,3.2-i,36.5);
-		line_g(3.2+i,0,3.2+i,36.5);
+		line_g(3.2-i,0,3.2-i,acl);
+		line_g(3.2+i,0,3.2+i,acl);
 	}
 	for(var i=1;i<37;i++){// Vertical grid
-		line_g(0,i,6.4,i);
+		line_g(0,i,acw,i);
 	}
+	// Ribs
+	ctx.font = '8pt Calibri';
+	ctx.fillStyle = '#809fff';	
+	for(var i=0;i<=64;i++){// Ribs
+		line_g(6.6,i*0.57,7.0,i*0.57);
+		if(zoom>20)ctx.fillText((i+20),g2sx(7.0),g2sy(i*0.57)-0.2);
+	}
+
+
 		
-	
+	// Boxes
 	ctx.lineWidth=2;
-	
+	ctx.font = '10pt Calibri';
+
 	var arrayLength = boxes.length;
 	for (var i = 0; i < arrayLength; i++) {
-		ctx.fillText(i+" "+selectedBox,10,70+30*i);
-		ctx.beginPath();
+		//ctx.fillText(i+" "+selectedBox,10,70+30*i);
 		if(selectedBox == i){
 			ctx.strokeStyle="#FF0000";
 		}
 		else{
 			ctx.strokeStyle="#00FF00";
 		}
-		ctx.rect(Math.min(g2sx(boxes[i].x-boxes[i].w/2),g2sx(boxes[i].x+boxes[i].w/2)),Math.min(g2sy(boxes[i].y-boxes[i].h/2),g2sy(boxes[i].y+boxes[i].h/2)),boxes[i].w*zoom,boxes[i].h*zoom);
+		ctx.fillStyle = ctx.strokeStyle;
+		var x1t = g2sx(boxes[i].x-boxes[i].w/2);
+		var x2t = g2sx(boxes[i].x+boxes[i].w/2);
+		var x1 = Math.min(x1t,x2t);
+		var y1t = g2sy(boxes[i].y-boxes[i].h/2);
+		var y2t = g2sy(boxes[i].y+boxes[i].h/2);
+		var y1 = Math.min(y1t,y2t);
+		ctx.beginPath();
+		ctx.rect(x1,y1,boxes[i].w*zoom,boxes[i].h*zoom);
 		ctx.stroke();
+		textinBox(x1,y1,x1+boxes[i].w*zoom,y1+boxes[i].h*zoom,boxes[i].weight,10);
+
 	}
-	ctx.fillText("zoom="+zoom+" dx="+dx+" dy="+dy+" mpx="+mousePos.x+" mpy="+mousePos.y+" gx="+s2gx(mousePos.x)+" gy="+s2gy(mousePos.y),10,30);
+
+//	textinBox(120,120,160,220,"Hello world");
+//	textinBox(120,60,200,100,"Hello");
+	//ctx.fillText("zoom="+zoom+" dx="+dx+" dy="+dy+" mpx="+mousePos.x+" mpy="+mousePos.y+" gx="+s2gx(mousePos.x)+" gy="+s2gy(mousePos.y),10,30);
 	window.requestAnimationFrame(step);
 }
 function StringOfBoxes(){
